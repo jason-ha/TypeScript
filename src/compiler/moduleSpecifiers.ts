@@ -1113,6 +1113,13 @@ function tryGetModuleNameFromExportsOrImports(
                 if (result) {
                     return result;
                 }
+                // A string target in the resolver always produces a SearchResult
+                // (stopping condition iteration). Mirror that here: if this
+                // applicable condition's string target didn't match, bail out
+                // rather than falling through to lower-priority conditions.
+                if (typeof subTarget === "string") {
+                    return undefined;
+                }
             }
         }
     }
