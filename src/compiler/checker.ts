@@ -8660,6 +8660,34 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             return symbol.parent ? factory.createQualifiedName(symbolToEntityNameNode(symbol.parent), identifier) : identifier;
         }
 
+        function canAccessSymbolThroughModuleSpecifier(chain: Symbol[], _specifier: string, _context: NodeBuilderContext): boolean {
+            if (chain.length <= 1) {
+                return true;
+            }
+
+            const targetSymbol = chain[1];
+
+            // If chain[1] is an alias, it was created by an explicit export declaration
+            // (export { ... }, export type { ... }, export default, etc.) — the symbol
+            // is accessible through the module specifier.
+            if (targetSymbol.flags & SymbolFlags.Alias) {
+                return true;
+            }
+
+            // For non-alias symbols directly in the module's export map, check if any
+            // declaration has the `export` modifier. Non-exported declarations in .d.ts
+            // files may appear in module export maps (due to binder behavior) but are
+            // not truly accessible via `import()`.
+            if (targetSymbol.declarations && targetSymbol.declarations.length > 0) {
+                const hasExportedDecl = targetSymbol.declarations.some(d => !!(getCombinedModifierFlags(d) & ModifierFlags.Export));
+                if (!hasExportedDecl) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         function symbolToTypeNode(symbol: Symbol, context: NodeBuilderContext, meaning: SymbolFlags, overrideTypeArguments?: readonly TypeNode[]): TypeNode {
             const chain = lookupSymbolChain(symbol, context, meaning, !(context.flags & NodeBuilderFlags.UseAliasDefinedOutsideCurrentScope)); // If we're using aliases outside the current scope, dont bother with the module
 
@@ -8721,6 +8749,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                         }
                     }
                 }
+
+                // Validate that the symbol is actually accessible through the chosen module specifier.
+                // Only check when not in IgnoreErrors mode (AllowNodeModulesRelativePaths is part of IgnoreErrors).
+                if (!(context.flags & NodeBuilderFlags.AllowNodeModulesRelativePaths) && nonRootParts && chain.length > 1) {
+                    if (!canAccessSymbolThroughModuleSpecifier(chain, specifier, context)) {
+                        context.encounteredError = true;
+                        if (context.tracker.reportLikelyUnsafeImportRequiredError) {
+                            context.tracker.reportLikelyUnsafeImportRequiredError(specifier, unescapeLeadingUnderscores(symbol.escapedName));
+                        }
+                    }
+                }
+
                 const lit = factory.createLiteralTypeNode(factory.createStringLiteral(specifier));
                 context.approximateLength += specifier.length + 10; // specifier + import("")
                 if (!nonRootParts || isEntityName(nonRootParts)) {
