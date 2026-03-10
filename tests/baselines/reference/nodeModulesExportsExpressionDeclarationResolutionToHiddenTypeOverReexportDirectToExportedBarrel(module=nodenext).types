@@ -142,7 +142,6 @@ import { sf } from "./schemaUtils.js";
 export class AppState extends sf.objectBeta("AppState", {
 >AppState : AppState
 >         : ^^^^^^^^
-// TODO update baseline to content that should be below if there was an error since import("pkg-a/internal").ObjectBeta_Hidden is invalid
 >sf.objectBeta("AppState", {    count: sf.number,}) : import("pkg-a/internal").ObjectBeta_Hidden
 >                                                   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 >sf.objectBeta : (name: string, fields: Record<string, "number-schema">) => typeof import("pkg-a/internal").ObjectBeta_Hidden

@@ -167,11 +167,5 @@ export {};
 //// [schemaUtils.d.ts]
 import { SchemaFactoryBeta } from "pkg-a/alpha";
 export declare const sf: SchemaFactoryBeta;
-//// [schema.d.ts]
-// TODO - should be an error since ObjectBeta_Internal is not exported from pkg-a/alpha.d.ts.
-declare const AppState_base: typeof import("pkg-a/alpha").ObjectBeta_Internal;
-export declare class AppState extends AppState_base {
-}
-export {};
 //// [main.d.ts]
 export {};
