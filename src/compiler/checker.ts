@@ -8674,18 +8674,34 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 return true;
             }
 
-            // For non-alias symbols directly in the module's export map, check if any
-            // declaration has the `export` modifier. Non-exported declarations in .d.ts
-            // files may appear in module export maps (due to binder behavior) but are
-            // not truly accessible via `import()`.
-            if (targetSymbol.declarations && targetSymbol.declarations.length > 0) {
-                const hasExportedDecl = targetSymbol.declarations.some(d => !!(getCombinedModifierFlags(d) & ModifierFlags.Export));
-                if (!hasExportedDecl) {
-                    return false;
+            // If any declaration has the `export` modifier or is an ExportSpecifier,
+            // the symbol is directly exported.
+            if (targetSymbol.declarations && targetSymbol.declarations.some(d => !!(getCombinedModifierFlags(d) & ModifierFlags.Export) || isExportSpecifier(d))) {
+                return true;
+            }
+
+            // Non-exported declarations in .d.ts files may appear in module export maps
+            // (due to binder behavior) but are not truly accessible via `import()`.
+            // When a symbol is exported via `export { ... }` and later merged with an
+            // augmentation, the alias and ExportSpecifier declarations may be lost.
+            // Check the module's source file for export declarations that explicitly
+            // name this symbol.
+            const moduleSourceFile = getSourceFileOfModule(chain[0]);
+            if (moduleSourceFile) {
+                const targetName = unescapeLeadingUnderscores(targetSymbol.escapedName);
+                for (const statement of moduleSourceFile.statements) {
+                    // Check `export { Name }` / `export { Name } from '...'`
+                    if (isExportDeclaration(statement) && statement.exportClause && isNamedExports(statement.exportClause)) {
+                        for (const specifier of statement.exportClause.elements) {
+                            if ((isIdentifier(specifier.name) ? unescapeLeadingUnderscores(specifier.name.escapedText) : specifier.name.text) === targetName) {
+                                return true;
+                            }
+                        }
+                    }
                 }
             }
 
-            return true;
+            return false;
         }
 
         function symbolToTypeNode(symbol: Symbol, context: NodeBuilderContext, meaning: SymbolFlags, overrideTypeArguments?: readonly TypeNode[]): TypeNode {
@@ -8751,13 +8767,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 }
 
                 // Validate that the symbol is actually accessible through the chosen module specifier.
-                // Only check when not in IgnoreErrors mode (AllowNodeModulesRelativePaths is part of IgnoreErrors).
-                if (!(context.flags & NodeBuilderFlags.AllowNodeModulesRelativePaths) && nonRootParts && chain.length > 1) {
+                // Skip when in IgnoreErrors mode (AllowNodeModulesRelativePaths is part of IgnoreErrors)
+                // or when the tracker can't report this error (e.g., code fix context where resolution
+                // is handled separately).
+                if (!(context.flags & NodeBuilderFlags.AllowNodeModulesRelativePaths) && context.tracker.reportLikelyUnsafeImportRequiredError && nonRootParts && chain.length > 1) {
                     if (!canAccessSymbolThroughModuleSpecifier(chain, specifier, context)) {
                         context.encounteredError = true;
-                        if (context.tracker.reportLikelyUnsafeImportRequiredError) {
-                            context.tracker.reportLikelyUnsafeImportRequiredError(specifier, unescapeLeadingUnderscores(symbol.escapedName));
-                        }
+                        context.tracker.reportLikelyUnsafeImportRequiredError(specifier, unescapeLeadingUnderscores(symbol.escapedName));
                     }
                 }
 
