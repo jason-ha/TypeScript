@@ -1,0 +1,216 @@
+//// [tests/cases/compiler/nodeModulesExportsExpressionDeclarationResolutionToInternalTypeOverReexportDirectToUnexportedSingleSource.ts] ////
+
+=== /node_modules/pkg-a/index.js ===
+exports.SchemaFactory = class SchemaFactory {};
+>exports.SchemaFactory = class SchemaFactory {} : typeof SchemaFactory
+>                                               : ^^^^^^^^^^^^^^^^^^^^
+>exports.SchemaFactory : typeof SchemaFactory
+>                      : ^^^^^^^^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactory : typeof SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^
+>class SchemaFactory {} : typeof SchemaFactory
+>                       : ^^^^^^^^^^^^^^^^^^^^
+>SchemaFactory : typeof SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^
+
+exports.SchemaFactoryBeta = class SchemaFactoryBeta extends exports.SchemaFactory {};
+>exports.SchemaFactoryBeta = class SchemaFactoryBeta extends exports.SchemaFactory {} : typeof SchemaFactoryBeta
+>                                                                                     : ^^^^^^^^^^^^^^^^^^^^^^^^
+>exports.SchemaFactoryBeta : typeof SchemaFactoryBeta
+>                          : ^^^^^^^^^^^^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactoryBeta : typeof SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^
+>class SchemaFactoryBeta extends exports.SchemaFactory {} : typeof SchemaFactoryBeta
+>                                                         : ^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactoryBeta : typeof SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^
+>exports.SchemaFactory : SchemaFactory
+>                      : ^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactory : typeof SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^
+
+exports.ObjectBase_Internal = class ObjectBase_Internal {};
+>exports.ObjectBase_Internal = class ObjectBase_Internal {} : typeof ObjectBase_Internal
+>                                                           : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>exports.ObjectBase_Internal : typeof ObjectBase_Internal
+>                            : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBase_Internal : typeof ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>class ObjectBase_Internal {} : typeof ObjectBase_Internal
+>                             : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBase_Internal : typeof ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+exports.ObjectBeta_Internal = class ObjectBeta_Internal extends exports.ObjectBase_Internal {};
+>exports.ObjectBeta_Internal = class ObjectBeta_Internal extends exports.ObjectBase_Internal {} : typeof ObjectBeta_Internal
+>                                                                                               : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>exports.ObjectBeta_Internal : typeof ObjectBeta_Internal
+>                            : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBeta_Internal : typeof ObjectBeta_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>class ObjectBeta_Internal extends exports.ObjectBase_Internal {} : typeof ObjectBeta_Internal
+>                                                                 : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBeta_Internal : typeof ObjectBeta_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>exports.ObjectBase_Internal : ObjectBase_Internal
+>                            : ^^^^^^^^^^^^^^^^^^^
+>exports : typeof import("./index.js")
+>        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBase_Internal : typeof ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+=== /node_modules/pkg-a/public.d.ts ===
+export { SchemaFactory } from "./index.js";
+>SchemaFactory : typeof import("./index.js").SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+=== /node_modules/pkg-a/beta.d.ts ===
+export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+>SchemaFactory : typeof import("./index.js").SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactoryBeta : typeof import("./index.js").SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+=== /node_modules/pkg-a/alpha.d.ts ===
+export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+>SchemaFactory : typeof import("./index.js").SchemaFactory
+>              : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>SchemaFactoryBeta : typeof import("./index.js").SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+=== /node_modules/pkg-a/internal.d.ts ===
+
+export * from "./index.js";
+
+=== /node_modules/pkg-a/index.d.ts ===
+export declare class SchemaFactory {
+>SchemaFactory : SchemaFactory
+>              : ^^^^^^^^^^^^^
+
+    constructor(name: string);
+>name : string
+>     : ^^^^^^
+
+    readonly number: "number-schema";
+>number : "number-schema"
+>       : ^^^^^^^^^^^^^^^
+}
+export declare class SchemaFactoryBeta extends SchemaFactory {
+>SchemaFactoryBeta : SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^
+>SchemaFactory : SchemaFactory
+>              : ^^^^^^^^^^^^^
+
+    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta_Internal;
+>objectBeta : (name: string, fields: Record<string, "number-schema">) => typeof ObjectBeta_Internal
+>           : ^    ^^      ^^      ^^                               ^^^^^                          
+>name : string
+>     : ^^^^^^
+>fields : Record<string, "number-schema">
+>       : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>ObjectBeta_Internal : typeof ObjectBeta_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+export declare class ObjectBase_Internal {
+>ObjectBase_Internal : ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^
+
+    readonly props: Record<string, unknown>;
+>props : Record<string, unknown>
+>      : ^^^^^^^^^^^^^^^^^^^^^^^
+}
+export declare class ObjectBeta_Internal extends ObjectBase_Internal {
+>ObjectBeta_Internal : ObjectBeta_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^
+>ObjectBase_Internal : ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^
+
+    readonly betaMetadata: string;
+>betaMetadata : string
+>             : ^^^^^^
+}
+
+// Package "b" has two .ts source files following a schema provider pattern.
+// schemaUtils.ts creates a SchemaFactoryBeta instance from pkg-a/alpha.
+// schema.ts exports AppState extending sf.objectBeta(...).
+// The root export is schema.ts.
+// Expected schema.d.ts to import from pkg-a/internal or alternate valid type expression.
+
+=== /node_modules/pkg-b/src/schemaUtils.ts ===
+import { SchemaFactoryBeta } from "pkg-a/alpha";
+>SchemaFactoryBeta : typeof SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^
+
+export const sf = new SchemaFactoryBeta("example");
+>sf : SchemaFactoryBeta
+>   : ^^^^^^^^^^^^^^^^^
+>new SchemaFactoryBeta("example") : SchemaFactoryBeta
+>                                 : ^^^^^^^^^^^^^^^^^
+>SchemaFactoryBeta : typeof SchemaFactoryBeta
+>                  : ^^^^^^^^^^^^^^^^^^^^^^^^
+>"example" : "example"
+>          : ^^^^^^^^^
+
+=== /node_modules/pkg-b/src/schema.ts ===
+import { sf } from "./schemaUtils.js";
+>sf : import("pkg-a/beta").SchemaFactoryBeta
+>   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+// Expected schema.d.ts to import from pkg-a/internal or alternate valid type expression.
+export class AppState extends sf.objectBeta("AppState", {
+>AppState : AppState
+>         : ^^^^^^^^
+>sf.objectBeta("AppState", {    count: sf.number,}) : import("pkg-a/internal").ObjectBeta_Internal
+>                                                   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>sf.objectBeta : (name: string, fields: Record<string, "number-schema">) => typeof import("pkg-a/internal").ObjectBeta_Internal
+>              : ^    ^^      ^^      ^^                               ^^^^^              ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+>sf : import("pkg-a/beta").SchemaFactoryBeta
+>   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>objectBeta : (name: string, fields: Record<string, "number-schema">) => typeof import("pkg-a/internal").ObjectBeta_Internal
+>           : ^    ^^      ^^      ^^                               ^^^^^              ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+>"AppState" : "AppState"
+>           : ^^^^^^^^^^
+>{    count: sf.number,} : { count: "number-schema"; }
+>                        : ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    count: sf.number,
+>count : "number-schema"
+>      : ^^^^^^^^^^^^^^^
+>sf.number : "number-schema"
+>          : ^^^^^^^^^^^^^^^
+>sf : import("pkg-a/beta").SchemaFactoryBeta
+>   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>number : "number-schema"
+>       : ^^^^^^^^^^^^^^^
+
+}) {}
+
+// Package "c" imports AppState from package "b" and checks it satisfies ObjectBase_Internal.
+
+=== /main.ts ===
+import type { ObjectBase_Internal } from "pkg-a/internal";
+>ObjectBase_Internal : ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^
+
+import { AppState } from "pkg-b";
+>AppState : typeof AppState
+>         : ^^^^^^^^^^^^^^^
+
+AppState satisfies typeof ObjectBase_Internal;
+>AppState satisfies typeof ObjectBase_Internal : typeof AppState
+>                                              : ^^^^^^^^^^^^^^^
+>AppState : typeof AppState
+>         : ^^^^^^^^^^^^^^^
+>ObjectBase_Internal : typeof ObjectBase_Internal
+>                    : ^^^^^^^^^^^^^^^^^^^^^^^^^^
+

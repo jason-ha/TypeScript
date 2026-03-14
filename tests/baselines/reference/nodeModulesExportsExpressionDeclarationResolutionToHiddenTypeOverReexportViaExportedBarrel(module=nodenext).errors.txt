@@ -1,0 +1,108 @@
+/node_modules/pkg-b/src/schema.ts(3,14): error TS2883: The inferred type of 'AppState' cannot be named without a reference to 'ObjectBeta_Hidden' from '../../pkg-a/impl.js'. This is likely not portable. A type annotation is necessary.
+
+
+==== /node_modules/pkg-a/package.json (0 errors) ====
+    {
+        "name": "pkg-a",
+        "version": "1.0.0",
+        "type": "module",
+        "exports": {
+            ".": {
+                "types": "./public.d.ts",
+                "default": "./index.js"
+            },
+            "./beta": {
+                "types": "./beta.d.ts",
+                "default": "./index.js"
+            },
+            "./alpha": {
+                "types": "./alpha.d.ts",
+                "default": "./index.js"
+            },
+            "./internal": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            }
+        }
+    }
+    
+==== /node_modules/pkg-a/index.js (0 errors) ====
+    export { SchemaFactory, SchemaFactoryBeta } from "./impl.js";
+    
+==== /node_modules/pkg-a/impl.js (0 errors) ====
+    exports.SchemaFactory = class SchemaFactory {};
+    exports.SchemaFactoryBeta = class SchemaFactoryBeta extends exports.SchemaFactory {};
+    exports.ObjectBase_Hidden = class ObjectBase_Hidden {};
+    exports.ObjectBeta_Hidden = class ObjectBeta_Hidden extends exports.ObjectBase_Hidden {};
+    
+==== /node_modules/pkg-a/public.d.ts (0 errors) ====
+    export { SchemaFactory } from "./index.js";
+    
+==== /node_modules/pkg-a/beta.d.ts (0 errors) ====
+    export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+    
+==== /node_modules/pkg-a/alpha.d.ts (0 errors) ====
+    export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+    
+==== /node_modules/pkg-a/index.d.ts (0 errors) ====
+    export { SchemaFactory, SchemaFactoryBeta } from "./impl.js";
+    
+==== /node_modules/pkg-a/impl.d.ts (0 errors) ====
+    export declare class SchemaFactory {
+        constructor(name: string);
+        readonly number: "number-schema";
+        object(name: string, fields: Record<string, "number-schema">): typeof ObjectBase_Hidden;
+    }
+    export declare class SchemaFactoryBeta extends SchemaFactory {
+        objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta_Hidden;
+    }
+    export declare class ObjectBase_Hidden {
+        readonly props: Record<string, unknown>;
+    }
+    export declare class ObjectBeta_Hidden extends ObjectBase_Hidden {
+        readonly betaMetadata: string;
+    }
+    
+    // Package "b" has two .ts source files following a schema provider pattern.
+    // schemaUtils.ts creates a SchemaFactoryBeta instance from pkg-a/alpha.
+    // schema.ts exports AppState extending sf.objectBeta(...).
+    // The root export is schema.ts.
+    // Expected schema.d.ts to yield error importing from pkg-a/alpha or use alternate valid type expression.
+    
+==== /node_modules/pkg-b/package.json (0 errors) ====
+    {
+        "name": "pkg-b",
+        "version": "1.0.0",
+        "type": "module",
+        "exports": {
+            ".": "./src/schema.js"
+        }
+    }
+    
+==== /node_modules/pkg-b/src/schemaUtils.ts (0 errors) ====
+    import { SchemaFactoryBeta } from "pkg-a/alpha";
+    export const sf = new SchemaFactoryBeta("example");
+    
+==== /node_modules/pkg-b/src/schema.ts (1 errors) ====
+    import { sf } from "./schemaUtils.js";
+    // Expected schema.d.ts to yield error importing from pkg-a/alpha or use alternate valid type expression.
+    export class AppState extends sf.objectBeta("AppState", {
+                 ~~~~~~~~
+!!! error TS2883: The inferred type of 'AppState' cannot be named without a reference to 'ObjectBeta_Hidden' from '../../pkg-a/impl.js'. This is likely not portable. A type annotation is necessary.
+        count: sf.number,
+    }) {}
+    
+    // Package "c" imports AppState from package "b" and checks it satisfies factory return type (ObjectBase_Hidden).
+    
+==== /package.json (0 errors) ====
+    {
+        "name": "pkg-c",
+        "private": true,
+        "type": "module"
+    }
+    
+==== /main.ts (0 errors) ====
+    import type { SchemaFactory } from "pkg-a";
+    import { AppState } from "pkg-b";
+    AppState satisfies ReturnType<SchemaFactory["object"]>;
+    

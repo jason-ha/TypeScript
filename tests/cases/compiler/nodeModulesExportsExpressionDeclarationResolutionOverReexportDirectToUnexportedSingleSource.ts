@@ -5,16 +5,17 @@
 // @declaration: true
 // @outDir: /out
 
-// Package "a" uses "exports" with roll-up public.d.ts, beta.d.ts, and alpha.d.ts that limit type exports.
-// The "." export only exposes SchemaFactory and ObjectBase (via public.d.ts declarations).
-// The "./beta" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via beta.d.ts declarations).
-// The "./alpha" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via alpha.d.ts declarations).
-// The "./internal" export exposes the full index.d.ts directly.
+// Package "a" uses "exports" with trimmed public.d.ts, beta.d.ts, and alpha.d.ts that limit type exports.
+// The "." export only exposes SchemaFactory and ObjectBase (via public.d.ts).
+// The "./beta" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via beta.d.ts).
+// The "./alpha" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via alpha.d.ts).
+// The "./internal" export exposes the full index.d.ts (via internal.d.ts).
 // Expected: package "b" schema.d.ts to import from pkg-a/alpha.
 
 // @Filename: /node_modules/pkg-a/package.json
 {
     "name": "pkg-a",
+    "version": "1.0.0",
     "type": "module",
     "exports": {
         ".": {
@@ -30,7 +31,7 @@
             "default": "./index.js"
         },
         "./internal": {
-            "types": "./index.d.ts",
+            "types": "./internal.d.ts",
             "default": "./index.js"
         }
     }
@@ -43,43 +44,16 @@ exports.ObjectBase = class ObjectBase {};
 exports.ObjectBeta = class ObjectBeta extends exports.ObjectBase {};
 
 // @Filename: /node_modules/pkg-a/public.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
+export { SchemaFactory, ObjectBase } from "./index.js";
 
 // @Filename: /node_modules/pkg-a/beta.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class SchemaFactoryBeta extends SchemaFactory {
-    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta;
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
-export declare class ObjectBeta extends ObjectBase {
-    readonly betaMetadata: string;
-}
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./index.js";
 
 // @Filename: /node_modules/pkg-a/alpha.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class SchemaFactoryBeta extends SchemaFactory {
-    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta;
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
-export declare class ObjectBeta extends ObjectBase {
-    readonly betaMetadata: string;
-}
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./index.js";
+
+// @Filename: /node_modules/pkg-a/internal.d.ts
+export * from "./index.js";
 
 // @Filename: /node_modules/pkg-a/index.d.ts
 export declare class SchemaFactory {
@@ -105,6 +79,7 @@ export declare class ObjectBeta extends ObjectBase {
 // @Filename: /node_modules/pkg-b/package.json
 {
     "name": "pkg-b",
+    "version": "1.0.0",
     "type": "module",
     "exports": {
         ".": "./src/schema.js"

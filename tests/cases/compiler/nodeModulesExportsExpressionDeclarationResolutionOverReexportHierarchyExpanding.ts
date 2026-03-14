@@ -11,7 +11,7 @@
 // The "./alpha" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via alpha.d.ts via beta.d.ts via public.d.ts).
 // The "./beta" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via beta.d.ts via public.d.ts).
 // (Note: the exports order is different compared to similar tests to highlight order independence.)
-// Expected: package "B" schema.d.ts to import from pkg-a/beta (while schemaUtils.ts imports pkg-a/alpha).
+// Expected: package "b" schema.d.ts to import from pkg-a/beta (while schemaUtils.ts imports pkg-a/alpha).
 
 // @Filename: /node_modules/pkg-a/package.json
 {

@@ -1,0 +1,137 @@
+//// [tests/cases/compiler/nodeModulesExportsExpressionDeclarationResolutionToInternalTypeOverReexportViaExportedBarrel.ts] ////
+
+=== /node_modules/pkg-a/index.js ===
+
+export * from "./impl.js";
+
+=== /node_modules/pkg-a/impl.js ===
+exports.SchemaFactory = class SchemaFactory {};
+>exports.SchemaFactory : Symbol(SchemaFactory, Decl(impl.js, 0, 0))
+>exports : Symbol(SchemaFactory, Decl(impl.js, 0, 0))
+>SchemaFactory : Symbol(SchemaFactory, Decl(impl.js, 0, 0))
+>SchemaFactory : Symbol(SchemaFactory, Decl(impl.js, 0, 23))
+
+exports.SchemaFactoryBeta = class SchemaFactoryBeta extends exports.SchemaFactory {};
+>exports.SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(impl.js, 0, 47))
+>exports : Symbol(SchemaFactoryBeta, Decl(impl.js, 0, 47))
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(impl.js, 0, 47))
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(impl.js, 1, 27))
+>exports.SchemaFactory : Symbol(SchemaFactory, Decl(impl.js, 0, 0))
+>exports : Symbol("./impl.js", Decl(impl.js, 0, 0))
+>SchemaFactory : Symbol(SchemaFactory, Decl(impl.js, 0, 0))
+
+exports.ObjectBase_Internal = class ObjectBase_Internal {};
+>exports.ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.js, 1, 85))
+>exports : Symbol(ObjectBase_Internal, Decl(impl.js, 1, 85))
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.js, 1, 85))
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.js, 2, 29))
+
+exports.ObjectBeta_Internal = class ObjectBeta_Internal extends exports.ObjectBase_Internal {};
+>exports.ObjectBeta_Internal : Symbol(ObjectBeta_Internal, Decl(impl.js, 2, 59))
+>exports : Symbol(ObjectBeta_Internal, Decl(impl.js, 2, 59))
+>ObjectBeta_Internal : Symbol(ObjectBeta_Internal, Decl(impl.js, 2, 59))
+>ObjectBeta_Internal : Symbol(ObjectBeta_Internal, Decl(impl.js, 3, 29))
+>exports.ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.js, 1, 85))
+>exports : Symbol("./impl.js", Decl(impl.js, 0, 0))
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.js, 1, 85))
+
+=== /node_modules/pkg-a/public.d.ts ===
+export { SchemaFactory } from "./index.js";
+>SchemaFactory : Symbol(SchemaFactory, Decl(public.d.ts, 0, 8))
+
+=== /node_modules/pkg-a/beta.d.ts ===
+export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+>SchemaFactory : Symbol(SchemaFactory, Decl(beta.d.ts, 0, 8))
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(beta.d.ts, 0, 23))
+
+=== /node_modules/pkg-a/alpha.d.ts ===
+export { SchemaFactory, SchemaFactoryBeta } from "./index.js";
+>SchemaFactory : Symbol(SchemaFactory, Decl(alpha.d.ts, 0, 8))
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(alpha.d.ts, 0, 23))
+
+=== /node_modules/pkg-a/index.d.ts ===
+
+export * from "./impl.js";
+
+=== /node_modules/pkg-a/impl.d.ts ===
+export declare class SchemaFactory {
+>SchemaFactory : Symbol(SchemaFactory, Decl(impl.d.ts, 0, 0))
+
+    constructor(name: string);
+>name : Symbol(name, Decl(impl.d.ts, 1, 16))
+
+    readonly number: "number-schema";
+>number : Symbol(SchemaFactory.number, Decl(impl.d.ts, 1, 30))
+}
+export declare class SchemaFactoryBeta extends SchemaFactory {
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(impl.d.ts, 3, 1))
+>SchemaFactory : Symbol(SchemaFactory, Decl(impl.d.ts, 0, 0))
+
+    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta_Internal;
+>objectBeta : Symbol(SchemaFactoryBeta.objectBeta, Decl(impl.d.ts, 4, 62))
+>name : Symbol(name, Decl(impl.d.ts, 5, 15))
+>fields : Symbol(fields, Decl(impl.d.ts, 5, 28))
+>Record : Symbol(Record, Decl(lib.es5.d.ts, --, --))
+>ObjectBeta_Internal : Symbol(ObjectBeta_Internal, Decl(impl.d.ts, 9, 1))
+}
+export declare class ObjectBase_Internal {
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.d.ts, 6, 1))
+
+    readonly props: Record<string, unknown>;
+>props : Symbol(ObjectBase_Internal.props, Decl(impl.d.ts, 7, 42))
+>Record : Symbol(Record, Decl(lib.es5.d.ts, --, --))
+}
+export declare class ObjectBeta_Internal extends ObjectBase_Internal {
+>ObjectBeta_Internal : Symbol(ObjectBeta_Internal, Decl(impl.d.ts, 9, 1))
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(impl.d.ts, 6, 1))
+
+    readonly betaMetadata: string;
+>betaMetadata : Symbol(ObjectBeta_Internal.betaMetadata, Decl(impl.d.ts, 10, 70))
+}
+
+// Package "b" has two .ts source files following a schema provider pattern.
+// schemaUtils.ts creates a SchemaFactoryBeta instance from pkg-a/alpha.
+// schema.ts exports AppState extending sf.objectBeta(...).
+// The root export is schema.ts.
+// Expected schema.d.ts to import from pkg-a/internal or alternate valid type expression.
+
+=== /node_modules/pkg-b/src/schemaUtils.ts ===
+import { SchemaFactoryBeta } from "pkg-a/alpha";
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(schemaUtils.ts, 0, 8))
+
+export const sf = new SchemaFactoryBeta("example");
+>sf : Symbol(sf, Decl(schemaUtils.ts, 1, 12))
+>SchemaFactoryBeta : Symbol(SchemaFactoryBeta, Decl(schemaUtils.ts, 0, 8))
+
+=== /node_modules/pkg-b/src/schema.ts ===
+import { sf } from "./schemaUtils.js";
+>sf : Symbol(sf, Decl(schema.ts, 0, 8))
+
+// Expected schema.d.ts to import from pkg-a/internal or alternate valid type expression.
+export class AppState extends sf.objectBeta("AppState", {
+>AppState : Symbol(AppState, Decl(schema.ts, 0, 38))
+>sf.objectBeta : Symbol(SchemaFactoryBeta.objectBeta, Decl(impl.d.ts, 4, 62))
+>sf : Symbol(sf, Decl(schema.ts, 0, 8))
+>objectBeta : Symbol(SchemaFactoryBeta.objectBeta, Decl(impl.d.ts, 4, 62))
+
+    count: sf.number,
+>count : Symbol(count, Decl(schema.ts, 2, 57))
+>sf.number : Symbol(SchemaFactory.number, Decl(impl.d.ts, 1, 30))
+>sf : Symbol(sf, Decl(schema.ts, 0, 8))
+>number : Symbol(SchemaFactory.number, Decl(impl.d.ts, 1, 30))
+
+}) {}
+
+// Package "c" imports AppState from package "b" and checks it satisfies ObjectBase_Internal.
+
+=== /main.ts ===
+import type { ObjectBase_Internal } from "pkg-a/internal";
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(main.ts, 0, 13))
+
+import { AppState } from "pkg-b";
+>AppState : Symbol(AppState, Decl(main.ts, 1, 8))
+
+AppState satisfies typeof ObjectBase_Internal;
+>AppState : Symbol(AppState, Decl(main.ts, 1, 8))
+>ObjectBase_Internal : Symbol(ObjectBase_Internal, Decl(main.ts, 0, 13))
+

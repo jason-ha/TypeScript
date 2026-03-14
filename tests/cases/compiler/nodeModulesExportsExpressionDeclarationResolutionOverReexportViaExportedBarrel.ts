@@ -5,16 +5,18 @@
 // @declaration: true
 // @outDir: /out
 
-// Package "a" uses "exports" with roll-up public.d.ts, beta.d.ts, and alpha.d.ts that limit type exports.
-// The "." export only exposes SchemaFactory and ObjectBase (via public.d.ts declarations).
-// The "./beta" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via beta.d.ts declarations).
-// The "./alpha" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via alpha.d.ts declarations).
+// Package "a" uses "exports" with trimmed public.d.ts, beta.d.ts, and alpha.d.ts that limit type exports.
+// The "." export only exposes SchemaFactory and ObjectBase (via public.d.ts).
+// The "./beta" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via beta.d.ts).
+// The "./alpha" export exposes the full index.d.ts including SchemaFactoryBeta and ObjectBeta (via alpha.d.ts).
 // The "./internal" export exposes the full index.d.ts directly.
-// Expected: package "b" schema.d.ts to import from pkg-a/alpha.
+// Internally package "a" barrel file (index.js) re-exports from an unexported impl.js file.
+// Expected: package "b" schema.d.ts to import from pkg-a/internal (while schemaUtils.ts imports pkg-a/alpha).
 
 // @Filename: /node_modules/pkg-a/package.json
 {
     "name": "pkg-a",
+    "version": "1.0.0",
     "type": "module",
     "exports": {
         ".": {
@@ -37,51 +39,27 @@
 }
 
 // @Filename: /node_modules/pkg-a/index.js
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./impl.js";
+
+// @Filename: /node_modules/pkg-a/impl.js
 exports.SchemaFactory = class SchemaFactory {};
 exports.SchemaFactoryBeta = class SchemaFactoryBeta extends exports.SchemaFactory {};
 exports.ObjectBase = class ObjectBase {};
 exports.ObjectBeta = class ObjectBeta extends exports.ObjectBase {};
 
 // @Filename: /node_modules/pkg-a/public.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
+export { SchemaFactory, ObjectBase } from "./index.js";
 
 // @Filename: /node_modules/pkg-a/beta.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class SchemaFactoryBeta extends SchemaFactory {
-    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta;
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
-export declare class ObjectBeta extends ObjectBase {
-    readonly betaMetadata: string;
-}
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./index.js";
 
 // @Filename: /node_modules/pkg-a/alpha.d.ts
-export declare class SchemaFactory {
-    constructor(name: string);
-    readonly number: "number-schema";
-}
-export declare class SchemaFactoryBeta extends SchemaFactory {
-    objectBeta(name: string, fields: Record<string, "number-schema">): typeof ObjectBeta;
-}
-export declare class ObjectBase {
-    readonly props: Record<string, unknown>;
-}
-export declare class ObjectBeta extends ObjectBase {
-    readonly betaMetadata: string;
-}
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./index.js";
 
 // @Filename: /node_modules/pkg-a/index.d.ts
+export { SchemaFactory, SchemaFactoryBeta, ObjectBase, ObjectBeta } from "./impl.js";
+
+// @Filename: /node_modules/pkg-a/impl.d.ts
 export declare class SchemaFactory {
     constructor(name: string);
     readonly number: "number-schema";
@@ -100,11 +78,12 @@ export declare class ObjectBeta extends ObjectBase {
 // schemaUtils.ts creates a SchemaFactoryBeta instance from pkg-a/alpha.
 // schema.ts exports AppState extending sf.objectBeta(...).
 // The root export is schema.ts.
-// Expected schema.d.ts to import from pkg-a/alpha.
+// Expected schema.d.ts to import from pkg-a/internal.
 
 // @Filename: /node_modules/pkg-b/package.json
 {
     "name": "pkg-b",
+    "version": "1.0.0",
     "type": "module",
     "exports": {
         ".": "./src/schema.js"
@@ -117,7 +96,7 @@ export const sf = new SchemaFactoryBeta("example");
 
 // @Filename: /node_modules/pkg-b/src/schema.ts
 import { sf } from "./schemaUtils.js";
-// Expected schema.d.ts to import from pkg-a/alpha.
+// Expected schema.d.ts to import from pkg-a/internal.
 export class AppState extends sf.objectBeta("AppState", {
     count: sf.number,
 }) {}
