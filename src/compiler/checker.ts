@@ -8660,7 +8660,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             return symbol.parent ? factory.createQualifiedName(symbolToEntityNameNode(symbol.parent), identifier) : identifier;
         }
 
-        function canAccessSymbolThroughModuleSpecifier(chain: Symbol[], _specifier: string, _context: NodeBuilderContext): boolean {
+        function canAccessSymbolThroughModuleSpecifier(chain: Symbol[], specifier: string, _context: NodeBuilderContext): boolean {
             if (chain.length <= 1) {
                 return true;
             }
@@ -8672,6 +8672,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             // is accessible through the module specifier.
             if (targetSymbol.flags & SymbolFlags.Alias) {
                 return true;
+            }
+
+            // If the specifier is a relative path and the module's source file is in
+            // node_modules, the specifier generator could not find a valid package export
+            // for this module. A relative path into another package's internals is not
+            // portable and should be treated as inaccessible.
+            const moduleSourceFile = getSourceFileOfModule(chain[0]);
+            if (specifier.startsWith(".") && moduleSourceFile && moduleSourceFile.fileName.includes("/node_modules/")) {
+                return false;
             }
 
             // If any declaration has the `export` modifier or is an ExportSpecifier,
@@ -8686,14 +8695,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             // augmentation, the alias and ExportSpecifier declarations may be lost.
             // Check the module's source file for export declarations that explicitly
             // name this symbol.
-            const moduleSourceFile = getSourceFileOfModule(chain[0]);
             if (moduleSourceFile) {
                 const targetName = unescapeLeadingUnderscores(targetSymbol.escapedName);
                 for (const statement of moduleSourceFile.statements) {
                     // Check `export { Name }` / `export { Name } from '...'`
                     if (isExportDeclaration(statement) && statement.exportClause && isNamedExports(statement.exportClause)) {
-                        for (const specifier of statement.exportClause.elements) {
-                            if ((isIdentifier(specifier.name) ? unescapeLeadingUnderscores(specifier.name.escapedText) : specifier.name.text) === targetName) {
+                        for (const exportElement of statement.exportClause.elements) {
+                            if ((isIdentifier(exportElement.name) ? unescapeLeadingUnderscores(exportElement.name.escapedText) : exportElement.name.text) === targetName) {
                                 return true;
                             }
                         }
